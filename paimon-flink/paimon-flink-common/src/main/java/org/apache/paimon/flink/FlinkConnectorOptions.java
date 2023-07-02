@@ -174,7 +174,6 @@ public class FlinkConnectorOptions {
                             "How many splits should assign to subtask per batch in StaticFileStoreSplitEnumerator "
                                     + "to avoid exceed `akka.framesize` limit.");
 
-<<<<<<< HEAD
     public static final ConfigOption<SplitAssignMode> SCAN_SPLIT_ENUMERATOR_ASSIGN_MODE =
             key("scan.split-enumerator.mode")
                     .enumType(SplitAssignMode.class)
@@ -202,12 +201,6 @@ public class FlinkConnectorOptions {
                     .withDescription(
                             "Weight of writer buffer in managed memory, Flink will compute the memory size "
                                     + "for writer according to the weight, the actual memory used depends on the running environment.");
-    public static final ConfigOption<Boolean> LOOKUP_ASYNC =
-            key("lookup.async")
-                    .booleanType()
-                    .defaultValue(false)
-                    .withDescription("Whether to set async lookup.");
-
     public static List<ConfigOption<?>> getOptions() {
         final Field[] fields = FlinkConnectorOptions.class.getFields();
         final List<ConfigOption<?>> list = new ArrayList<>(fields.length);

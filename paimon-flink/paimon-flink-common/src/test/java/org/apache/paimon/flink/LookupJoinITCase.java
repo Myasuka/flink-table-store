@@ -50,18 +50,12 @@ public class LookupJoinITCase extends CatalogITCaseBase {
 
     @Override
     public List<String> ddl() {
-        List<String> ddls = new ArrayList<>();
-        ddls.add("CREATE TABLE T (i INT, `proctime` AS PROCTIME())");
-        if (asyncLookup) {
-            ddls.add(
-                    "CREATE TABLE DIM (i INT PRIMARY KEY NOT ENFORCED, j INT, k1 INT, k2 INT) WITH"
-                            + " ('continuous.discovery-interval'='1 ms', 'lookup.async'='true')");
-        } else {
-            ddls.add(
-                    "CREATE TABLE PARTITIONED_DIM (i INT, j INT, k1 INT, k2 INT, PRIMARY KEY (i, j) NOT ENFORCED) "
-                            + "PARTITIONED BY (`i`) WITH ('continuous.discovery-interval'='1 ms')");
-        }
-        return ddls;
+        return Arrays.asList(
+                "CREATE TABLE T (i INT, `proctime` AS PROCTIME())",
+                "CREATE TABLE DIM (i INT PRIMARY KEY NOT ENFORCED, j INT, k1 INT, k2 INT) WITH"
+                        + " ('continuous.discovery-interval'='1 ms')",
+                "CREATE TABLE PARTITIONED_DIM (i INT, j INT, k1 INT, k2 INT, PRIMARY KEY (i, j) NOT ENFORCED) "
+                        + "PARTITIONED BY (`i`) WITH ('continuous.discovery-interval'='1 ms')");
     }
 
     @Override
@@ -620,10 +614,9 @@ public class LookupJoinITCase extends CatalogITCaseBase {
     @Timeout(30)
     public void testRetryLookup() throws Exception {
         sql("INSERT INTO DIM VALUES (1, 11, 111, 1111), (2, 22, 222, 2222)");
-
+        String lookupHint = String.format("/*+ LOOKUP('table'='D', 'retry-predicate'='lookup_miss', 'retry-strategy'='fixed_delay', 'fixed-delay'='1s','max-attempts'='60', 'async'='%s') */", asyncLookup);
         String query =
-                "SELECT /*+ LOOKUP('table'='D', 'retry-predicate'='lookup_miss',"
-                        + " 'retry-strategy'='fixed_delay', 'fixed-delay'='1s','max-attempts'='60') */"
+                "SELECT " + lookupHint
                         + " T.i, D.j, D.k1, D.k2 FROM T LEFT JOIN DIM for system_time as of T.proctime AS D ON T.i = D.i";
         BlockingIterator<Row, Row> iterator = BlockingIterator.of(sEnv.executeSql(query).collect());
 
@@ -639,7 +632,8 @@ public class LookupJoinITCase extends CatalogITCaseBase {
         iterator.close();
     }
 
-    @Test
+    @TestTemplate
+    @Timeout(30)
     public void testLookupPartitionedTable() throws Exception {
         String query =
                 "SELECT T.i, D.j, D.k1, D.k2 FROM T LEFT JOIN PARTITIONED_DIM for system_time as of T.proctime AS D ON T.i = D.i";
@@ -666,7 +660,8 @@ public class LookupJoinITCase extends CatalogITCaseBase {
         iterator.close();
     }
 
-    @Test
+    @TestTemplate
+    @Timeout(30)
     public void testLookupNonPkAppendTable() throws Exception {
         sql(
                 "CREATE TABLE DIM_NO_PK (i INT, j INT, k1 INT, k2 INT) "
